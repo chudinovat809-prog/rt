@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Полет воздушных шаров ✨</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  
+  :root {
+    --bg: #FDFBF7;
+    --card: #FFFFFF;
+    --accent: #FFB703;
+    --accent-dark: #FB8500;
+    --text: #4A453E;
+    --text-light: #8B7E6B;
+    --shadow: rgba(255, 183, 3, 0.18);
+    --pink: #FFB5A7;
+    --peach: #FCD5CE;
+  }
+  
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    touch-action: manipulation;
+  }
+  
+  #app {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    height: 100vh;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #FFF8E7 0%, #FDFBF7 50%, #FEF3E2 100%);
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.05);
+  }
+  
+  #gameCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+  
+  /* Верхняя панель */
+  .top-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    pointer-events: none;
+  }
+  
+  .score-card {
+    background: var(--card);
+    padding: 10px 16px;
+    border-radius: 20px;
+    box-shadow: 0 4px 16px var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    pointer-events: auto;
+  }
+  
+  .score-card .emoji { font-size: 18px; }
+  
+  .sound-btn {
+    background: var(--card);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 4px 16px var(--shadow);
+    font-size: 20px;
+    cursor: pointer;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+  
+  .sound-btn:active { transform: scale(0.9); }
+  
+  /* Нижняя панель */
+  .bottom-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+  }
+  
+  .flowers-collected {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 14px 18px;
+    box-shadow: 0 4px 20px var(--shadow);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+  
+  .flower-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 50px;
+  }
+  
+  .flower-slot .emoji {
+    font-size: 26px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    transition: transform 0.3s;
+  }
+  
+  .flower-slot.pulse .emoji {
+    animation: pulse 0.6s ease;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.4) rotate(15deg); }
+  }
+  
+  .flower-slot .count {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  
+  .vibe-btn {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+    color: white;
+    border: none;
+    padding: 18px;
+    border-radius: 24px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(255, 183, 3, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .vibe-btn:active { transform: scale(0.97); }
+  
+  .vibe-btn::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+    animation: shine 3s infinite;
+  }
+  
+  @keyframes shine {
+    0% { transform: translateX(-100%) translateY(-100%); }
+    100% { transform: translateX(100%) translateY(100%); }
+  }
+  
+  .vibe-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  /* Экран "Вайб" */
+  .vibe-screen {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  
+  .vibe-screen.active {
+    display: flex;
+    opacity: 1;
+  }
+  
+  .vibe-header {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .back-btn {
+    background: var(--card);
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 4px 16px var(--shadow);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  
+  .vibe-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  
+  .vibe-canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  
+  #vibeCanvas {
+    width: 100%;
+    max-width: 360px;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    background: white;
+  }
+  
+  .vibe-actions {
+    padding: 20px;
+    display: flex;
+    gap: 12px;
+  }
+  
+  .action-btn {
+    flex: 1;
+    padding: 16px;
+    border-radius: 20px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  
+  .action-btn:active { transform: scale(0.97); }
+  
+  .action-btn.primary {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+    color: white;
+    box-shadow: 0 8px 24px rgba(255, 183, 3, 0.4);
+  }
+  
+  .action-btn.secondary {
+    background: var(--card);
+    color: var(--text);
+    box-shadow: 0 4px 16px var(--shadow);
+  }
+  
+  /* Всплывающий цветок */
+  .falling-flower {
+    position: absolute;
+    font-size: 40px;
+    pointer-events: none;
+    z-index: 5;
+    animation: fall 3s ease-in forwards;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  }
+  
+  @keyframes fall {
+    0% { transform: translateY(0) rotate(0deg) scale(0.5); opacity: 0; }
+    15% { transform: translateY(20px) rotate(60deg) scale(1.2); opacity: 1; }
+    100% { transform: translateY(400px) rotate(360deg) scale(0.8); opacity: 0; }
+  }
+  
+  /* Подсказка */
+  .hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255,255,255,0.95);
+    padding: 16px 24px;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px var(--shadow);
+    font-size: 14px;
+    text-align: center;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+  
+  .hint.show { opacity: 1; }
+  
+  /* Приветствие */
+  .welcome {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #FFF8E7 0%, #FDFBF7 100%);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 30px;
+    text-align: center;
+    transition: opacity 0.6s;
+  }
+  
+  .welcome.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  .welcome-emoji {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  
+  .welcome h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .welcome p {
+    font-size: 15px;
+    color: var(--text-light);
+    line-height: 1.5;
+    margin-bottom: 30px;
+  }
+  
+  .start-btn {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+    color: white;
+    border: none;
+    padding: 18px 48px;
+    border-radius: 28px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(255, 183, 3, 0.4);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Приветствие -->
+  <div class="welcome" id="welcome">
+    <div class="welcome-emoji">🎈</div>
+    <h1>Полет воздушных шаров</h1>
+    <p>Лопай шары, лови цветы и создай свой идеальный вайб ✨</p>
+    <button class="start-btn" id="startBtn">Начать ✨</button>
+  </div>
+
+  <!-- Игровой экран -->
+  <canvas id="gameCanvas"></canvas>
+  
+  <div class="top-bar">
+    <div class="score-card">
+      <span class="emoji">🎈</span>
+      <span id="scoreText">0</span>
+    </div>
+    <button class="sound-btn" id="soundBtn">🔊</button>
+  </div>
+  
+  <div class="bottom-bar">
+    <div class="flowers-collected">
+      <div class="flower-slot" data-type="rose">
+        <span class="emoji">🌹</span>
+        <span class="count" id="count-rose">0</span>
+      </div>
+      <div class="flower-slot" data-type="peony">
+        <span class="emoji">🌸</span>
+        <span class="count" id="count-peony">0</span>
+      </div>
+      <div class="flower-slot" data-type="daisy">
+        <span class="emoji">🌼</span>
+        <span class="count" id="count-daisy">0</span>
+      </div>
+      <div class="flower-slot" data-type="chrysanthemum">
+        <span class="emoji">🌻</span>
+        <span class="count" id="count-chrysanthemum">0</span>
+      </div>
+    </div>
+    <button class="vibe-btn" id="vibeBtn" disabled>
+      <span>✨</span>
+      <span>Создать вайб</span>
+    </button>
+  </div>
+  
+  <div class="hint" id="hint">Лопай шары, чтобы поймать цветы 🌸</div>
+  
+  <!-- Экран вайба -->
+  <div class="vibe-screen" id="vibeScreen">
+    <div class="vibe-header">
+      <button class="back-btn" id="backBtn">←</button>
+      <div class="vibe-title">Твой вайб ✨</div>
+      <div style="width:44px"></div>
+    </div>
+    <div class="vibe-canvas-wrap">
+      <canvas id="vibeCanvas" width="720" height="960"></canvas>
+    </div>
+    <div class="vibe-actions">
+      <button class="action-btn secondary" id="resetBtn">🔄 Заново</button>
+      <button class="action-btn primary" id="saveBtn">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ КОНФИГ ============
+const CONFIG = {
+  maxBalloons: 8,
+  spawnInterval: 1200,
+  flowerChance: 0.25,
+  colors: ['#FFB5A7', '#FCD5CE', '#FFD6A5', '#CAFFBF', '#9BF6FF', '#BDB2FF', '#FFC6FF', '#FDFFB6'],
+  flowerTypes: [
+    { type: 'rose', emoji: '🌹', weight: 1 },
+    { type: 'peony', emoji: '🌸', weight: 1 },
+    { type: 'daisy', emoji: '🌼', weight: 1.2 },
+    { type: 'chrysanthemum', emoji: '🌻', weight: 0.8 }
+  ],
+  phrases: [
+    'bloom where you are planted',
+    'sunshine on my mind',
+    'soft days, golden rays',
+    'petals & peace',
+    'summer in my pocket',
+    'little joys, big vibes'
+  ]
+};
+
+// ============ STATE ============
+const state = {
+  score: 0,
+  flowers: { rose: 0, peony: 0, daisy: 0, chrysanthemum: 0 },
+  soundOn: true,
+  started: false
+};
+
+// Загрузка из LocalStorage
+function loadState() {
+  try {
+    const saved = localStorage.getItem('balloons_state');
+    if (saved) {
+      const data = JSON.parse(saved);
+      state.score = data.score || 0;
+      state.flowers = data.flowers || state.flowers;
+      state.soundOn = data.soundOn !== false;
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('balloons_state', JSON.stringify({
+      score: state.score,
+      flowers: state.flowers,
+      soundOn: state.soundOn
+    }));
+  } catch(e) {}
+}
+
+// ============ AUDIO ============
+let audioCtx = null;
+let bgMusicInterval = null;
+let bgGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    bgGain = audioCtx.createGain();
+    bgGain.gain.value = 0.08;
+    bgGain.connect(audioCtx.destination);
+  } catch(e) { console.warn('Audio not supported'); }
+}
+
+function playPop() {
+  if (!audioCtx || !state.soundOn) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(800, now);
+  osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+  gain.gain.setValueAtTime(0.3, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.15);
+}
+
+function playChime() {
+  if (!audioCtx || !state.soundOn) return;
+  const now = audioCtx.currentTime;
+  const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+  notes.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, now + i * 0.08);
+    gain.gain.linearRampToValueAtTime(0.15, now + i * 0.08 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.8);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now + i * 0.08);
+    osc.stop(now + i * 0.08 + 0.8);
+  });
+}
+
+function playFlower() {
+  if (!audioCtx || !state.soundOn) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(1200, now);
+  osc.frequency.exponentialRampToValueAtTime(600, now + 0.4);
+  gain.gain.setValueAtTime(0.2, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.4);
+}
+
+// Фоновая мелодия - мягкие мажорные аккорды
+function startBgMusic() {
+  if (!audioCtx || bgMusicInterval) return;
+  const chords = [
+    [261.63, 329.63, 392.00], // C major
+    [293.66, 369.99, 440.00], // D major  
+    [329.63, 415.30, 493.88], // E major
+    [261.63, 329.63, 392.00]  // C major
+  ];
+  let chordIdx = 0;
+  
+  function playChord() {
+    if (!state.soundOn || !audioCtx) return;
+    const chord = chords[chordIdx % chords.length];
+    const now = audioCtx.currentTime;
+    chord.forEach(freq => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.04, now + 0.3);
+      gain.gain.linearRampToValueAtTime(0, now + 2.5);
+      osc.connect(gain);
+      gain.connect(bgGain);
+      osc.start(now);
+      osc.stop(now + 2.5);
+    });
+    chordIdx++;
+  }
+  
+  playChord();
+  bgMusicInterval = setInterval(playChord, 2500);
+}
+
+function stopBgMusic() {
+  if (bgMusicInterval) {
+    clearInterval(bgMusicInterval);
+    bgMusicInterval = null;
+  }
+}
+
+// ============ CANVAS ============
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resizeCanvas() {
+  dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  W = rect.width;
+  H = rect.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+// ============ ШАРЫ ============
+const balloons = [];
+
+class Balloon {
+  constructor() {
+    this.radius = 30 + Math.random() * 15;
+    this.x = this.radius + Math.random() * (W - this.radius * 2);
+    this.y = H + this.radius + Math.random() * 100;
+    this.color = CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)];
+    this.speedY = 0.8 + Math.random() * 0.8;
+    this.wobbleAmp = 15 + Math.random() * 20;
+    this.wobbleSpeed = 0.01 + Math.random() * 0.015;
+    this.wobbleOffset = Math.random() * Math.PI * 2;
+    this.baseX = this.x;
+    this.time = 0;
+    this.sparkle = 0;
+    this.alive = true;
+    this.popping = false;
+    this.popProgress = 0;
+  }
+  
+  update(dt) {
+    if (this.popping) {
+      this.popProgress += dt * 0.003;
+      if (this.popProgress >= 1) this.alive = false;
+      return;
+    }
+    this.time += dt;
+    this.y -= this.speedY * dt * 0.06;
+    this.x = this.baseX + Math.sin(this.time * this.wobbleSpeed + this.wobbleOffset) * this.wobbleAmp;
+    
+    // Блик на солнце
+    this.sparkle = (Math.sin(this.time * 0.003) + 1) * 0.5;
+    
+    if (this.y < -this.radius * 2) this.alive = false;
+  }
+  
+  draw() {
+    if (this.popping) {
+      // Анимация лопанья
+      const scale = 1 + this.popProgress * 0.5;
+      const alpha = 1 - this.popProgress;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(this.x, this.y);
+      ctx.scale(scale, scale);
+      this.drawBalloon(0, 0);
+      ctx.restore();
+      return;
+    }
+    this.drawBalloon(this.x, this.y);
+  }
+  
+  drawBalloon(x, y) {
+    // Тень
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 4;
+    
+    // Тело шара
+    const grad = ctx.createRadialGradient(x - this.radius * 0.3, y - this.radius * 0.3, this.radius * 0.1, x, y, this.radius);
+    grad.addColorStop(0, '#FFFFFF');
+    grad.addColorStop(0.3, this.color);
+    grad.addColorStop(1, this.darkenColor(this.color, 0.85));
+    
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(x, y, this.radius * 0.9, this.radius, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    
+    // Блик
+    ctx.save();
+    ctx.globalAlpha = 0.4 + this.sparkle * 0.4;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.ellipse(x - this.radius * 0.35, y - this.radius * 0.4, this.radius * 0.2, this.radius * 0.3, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    
+    // Маленький блик-звездочка
+    if (this.sparkle > 0.7) {
+      ctx.save();
+      ctx.globalAlpha = (this.sparkle - 0.7) * 3;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      const sx = x - this.radius * 0.2;
+      const sy = y - this.radius * 0.5;
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2;
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + Math.cos(angle) * 4, sy + Math.sin(angle) * 4);
+      }
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.stroke();
+      ctx.restore();
+    }
+    
+    // Узелок
+    ctx.fillStyle = this.darkenColor(this.color, 0.7);
+    ctx.beginPath();
+    ctx.moveTo(x - 4, y + this.radius);
+    ctx.lineTo(x + 4, y + this.radius);
+    ctx.lineTo(x, y + this.radius + 6);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Веревочка
+    ctx.strokeStyle = 'rgba(139, 126, 107, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y + this.radius + 6);
+    ctx.quadraticCurveTo(x + Math.sin(this.time * 0.002) * 5, y + this.radius + 25, x, y + this.radius + 40);
+    ctx.stroke();
+  }
+  
+  darkenColor(hex, factor) {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `rgb(${Math.floor(r*factor)}, ${Math.floor(g*factor)}, ${Math.floor(b*factor)})`;
+  }
+  
+  contains(px, py) {
+    const dx = px - this.x;
+    const dy = py - this.y;
+    return (dx*dx)/(this.radius*0.9*this.radius*0.9) + (dy*dy)/(this.radius*this.radius) <= 1;
+  }
+  
+  pop() {
+    if (this.popping) return;
+    this.popping = true;
+    this.popProgress = 0;
+  }
+}
+
+// ============ ФЕЙЕРВЕРКИ ============
+const particles = [];
+
+class Particle {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 4;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.color = color;
+    this.life = 1;
+    this.size = 2 + Math.random() * 3;
+    this.gravity = 0.1;
+  }
+  
+  update(dt) {
+    const factor = dt * 0.06;
+    this.x += this.vx * factor;
+    this.y += this.vy * factor;
+    this.vy += this.gravity * factor;
+    this.life -= dt * 0.0015;
+  }
+  
+  draw() {
+    if (this.life <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = this.life;
+    ctx.fillStyle = this.color;
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function createFirework(x, y, color) {
+  const colors = [color, '#FFD700', '#FFFFFF', '#FFB5A7', '#FFC6FF'];
+  for (let i = 0; i < 30; i++) {
+    particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)]));
+  }
+}
+
+// ============ ЦВЕТЫ ============
+function spawnFlower(x, y) {
+  const totalWeight = CONFIG.flowerTypes.reduce((s, f) => s + f.weight, 0);
+  let r = Math.random() * totalWeight;
+  let chosen = CONFIG.flowerTypes[0];
+  for (const f of CONFIG.flowerTypes) {
+    r -= f.weight;
+    if (r <= 0) { chosen = f; break; }
+  }
+  
+  state.flowers[chosen.type]++;
+  updateFlowerUI(chosen.type);
+  playFlower();
+  
+  const el = document.createElement('div');
+  el.className = 'falling-flower';
+  el.textContent = chosen.emoji;
+  el.style.left = (x - 20) + 'px';
+  el.style.top = y + 'px';
+  document.getElementById('app').appendChild(el);
+  
+  setTimeout(() => el.remove(), 3000);
+  
+  saveState();
+  updateVibeBtn();
+}
+
+// ============ UI ============
+function updateScoreUI() {
+  document.getElementById('scoreText').textContent = state.score;
+}
+
+function updateFlowerUI(type) {
+  const countEl = document.getElementById('count-' + type);
+  countEl.textContent = state.flowers[type];
+  const slot = countEl.parentElement;
+  slot.classList.remove('pulse');
+  void slot.offsetWidth;
+  slot.classList.add('pulse');
+}
+
+function updateAllFlowerUI() {
+  Object.keys(state.flowers).forEach(type => {
+    document.getElementById('count-' + type).textContent = state.flowers[type];
+  });
+}
+
+function updateVibeBtn() {
+  const total = Object.values(state.flowers).reduce((s, v) => s + v, 0);
+  document.getElementById('vibeBtn').disabled = total === 0;
+}
+
+// ============ GAME LOOP ============
+let lastTime = 0;
+let spawnTimer = 0;
+
+function gameLoop(time) {
+  if (!state.started) {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+  const dt = Math.min(time - lastTime, 50);
+  lastTime = time;
+  
+  ctx.clearRect(0, 0, W, H);
+  
+  // Спавн шаров
+  spawnTimer += dt;
+  if (spawnTimer > CONFIG.spawnInterval && balloons.filter(b => !b.popping).length < CONFIG.maxBalloons) {
+    balloons.push(new Balloon());
+    spawnTimer = 0;
+  }
+  
+  // Обновление и отрисовка шаров
+  for (let i = balloons.length - 1; i >= 0; i--) {
+    balloons[i].update(dt);
+    balloons[i].draw();
+    if (!balloons[i].alive) balloons.splice(i, 1);
+  }
+  
+  // Частицы
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update(dt);
+    particles[i].draw();
+    if (particles[i].life <= 0) particles.splice(i, 1);
+  }
+  
+  requestAnimationFrame(gameLoop);
+}
+
+// ============ INPUT ============
+function handleTap(e) {
+  if (!state.started) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  
+  // Ищем шар снизу вверх (последний нарисованный сверху)
+  for (let i = balloons.length - 1; i >= 0; i--) {
+    const b = balloons[i];
+    if (!b.popping && b.contains(x, y)) {
+      b.pop();
+      state.score++;
+      updateScoreUI();
+      playPop();
+      createFirework(b.x, b.y, b.color);
+      
+      if (Math.random() < CONFIG.flowerChance) {
+        setTimeout(() => spawnFlower(b.x, b.y), 200);
+      }
+      
+      saveState();
+      break;
+    }
+  }
+}
+
+canvas.addEventListener('click', handleTap);
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  handleTap(e);
+}, { passive: false });
+
+// ============ VIBE SCREEN ============
+function renderVibe() {
+  const vc = document.getElementById('vibeCanvas');
+  const vctx = vc.getContext('2d');
+  const vw = vc.width;
+  const vh = vc.height;
+  
+  // Фон - градиент
+  const bgGrad = vctx.createLinearGradient(0, 0, vw, vh);
+  bgGrad.addColorStop(0, '#FFF8E7');
+  bgGrad.addColorStop(0.5, '#FDFBF7');
+  bgGrad.addColorStop(1, '#FEF3E2');
+  vctx.fillStyle = bgGrad;
+  vctx.fillRect(0, 0, vw, vh);
+  
+  // Солнечные лучи
+  vctx.save();
+  vctx.globalAlpha = 0.15;
+  const sunX = vw * 0.8;
+  const sunY = vh * 0.15;
+  const sunGrad = vctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 300);
+  sunGrad.addColorStop(0, '#FFD700');
+  sunGrad.addColorStop(1, 'transparent');
+  vctx.fillStyle = sunGrad;
+  vctx.fillRect(0, 0, vw, vh);
+  vctx.restore();
+  
+  // Декоративные круги
+  vctx.save();
+  vctx.globalAlpha = 0.08;
+  vctx.fillStyle = '#FFB703';
+  vctx.beginPath();
+  vctx.arc(vw * 0.1, vh * 0.9, 120, 0, Math.PI * 2);
+  vctx.fill();
+  vctx.fillStyle = '#FFB5A7';
+  vctx.beginPath();
+  vctx.arc(vw * 0.9, vh * 0.85, 80, 0, Math.PI * 2);
+  vctx.fill();
+  vctx.restore();
+  
+  // Рамка полароида
+  const frameX = 60;
+  const frameY = 100;
+  const frameW = vw - 120;
+  const frameH = vh - 300;
+  
+  vctx.save();
+  vctx.shadowColor = 'rgba(0,0,0,0.15)';
+  vctx.shadowBlur = 30;
+  vctx.shadowOffsetY = 10;
+  vctx.fillStyle = '#FFFFFF';
+  vctx.fillRect(frameX, frameY, frameW, frameH);
+  vctx.restore();
+  
+  // Внутренняя область
+  const innerX = frameX + 20;
+  const innerY = frameY + 20;
+  const innerW = frameW - 40;
+  const innerH = frameH - 100;
+  
+  const innerGrad = vctx.createLinearGradient(innerX, innerY, innerX + innerW, innerY + innerH);
+  innerGrad.addColorStop(0, '#FEF3E2');
+  innerGrad.addColorStop(1, '#FFF8E7');
+  vctx.fillStyle = innerGrad;
+  vctx.fillRect(innerX, innerY, innerW, innerH);
+  
+  // Цветы внутри рамки
+  const flowers = [];
+  Object.entries(state.flowers).forEach(([type, count]) => {
+    for (let i = 0; i < count; i++) {
+      flowers.push(type);
+    }
+  });
+  
+  // Раскладываем цветы красиво
+  const emojis = {
+    rose: '🌹',
+    peony: '🌸',
+    daisy: '🌼',
+    chrysanthemum: '🌻'
+  };
+  
+  // Рисуем цветы в виде композиции
+  vctx.font = '60px serif';
+  vctx.textAlign = 'center';
+  vctx.textBaseline = 'middle';
+  
+  const cols = 4;
+  const rows = Math.ceil(flowers.length / cols);
+  const cellW = innerW / cols;
+  const cellH = Math.min(80, innerH / Math.max(rows, 1));
+  const startY = innerY + (innerH - rows * cellH) / 2 + cellH / 2;
+  
+  flowers.forEach((type, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const cx = innerX + col * cellW + cellW / 2;
+    const cy = startY + row * cellH;
+    
+    // Тень под цветком
+    vctx.save();
+    vctx.globalAlpha = 0.2;
+    vctx.fillStyle = '#FFB703';
+    vctx.beginPath();
+    vctx.ellipse(cx, cy + 25, 25, 8, 0, 0, Math.PI * 2);
+    vctx.fill();
+    vctx.restore();
+    
+    // Небольшой наклон для естественности
+    vctx.save();
+    vctx.translate(cx, cy);
+    vctx.rotate((Math.random() - 0.5) * 0.3);
+    vctx.fillText(emojis[type], 0, 0);
+    vctx.restore();
+  });
+  
+  // Текст внизу рамки
+  const phrase = CONFIG.phrases[Math.floor(Math.random() * CONFIG.phrases.length)];
+  vctx.fillStyle = '#4A453E';
+  vctx.font = 'italic 28px Georgia, serif';
+  vctx.textAlign = 'center';
+  vctx.fillText('"' + phrase + '"', vw / 2, frameY + frameH - 40);
+  
+  // Дата
+  vctx.fillStyle = '#8B7E6B';
+  vctx.font = '18px sans-serif';
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  vctx.fillText(dateStr + ' ✨', vw / 2, frameY + frameH - 15);
+}
+
+function openVibeScreen() {
+  renderVibe();
+  document.getElementById('vibeScreen').classList.add('active');
+  playChime();
+}
+
+function closeVibeScreen() {
+  document.getElementById('vibeScreen').classList.remove('active');
+}
+
+function saveVibe() {
+  const vc = document.getElementById('vibeCanvas');
+  const link = document.createElement('a');
+  link.download = 'my-vibe-' + Date.now() + '.png';
+  link.href = vc.toDataURL('image/png');
+  link.click();
+}
+
+function resetFlowers() {
+  if (!confirm('Начать заново? Все цветы будут потеряны.')) return;
+  state.flowers = { rose: 0, peony: 0, daisy: 0, chrysanthemum: 0 };
+  state.score = 0;
+  updateAllFlowerUI();
+  updateScoreUI();
+  updateVibeBtn();
+  saveState();
+  closeVibeScreen();
+}
+
+// ============ EVENTS ============
+document.getElementById('startBtn').addEventListener('click', () => {
+  initAudio();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  document.getElementById('welcome').classList.add('hide');
+  state.started = true;
+  startBgMusic();
+  
+  // Показать подсказку
+  const hint = document.getElementById('hint');
+  hint.classList.add('show');
+  setTimeout(() => hint.classList.remove('show'), 3000);
+});
+
+document.getElementById('soundBtn').addEventListener('click', () => {
+  state.soundOn = !state.soundOn;
+  document.getElementById('soundBtn').textContent = state.soundOn ? '🔊' : '🔇';
+  if (state.soundOn) {
+    initAudio();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    startBgMusic();
+  } else {
+    stopBgMusic();
+  }
+  saveState();
+});
+
+document.getElementById('vibeBtn').addEventListener('click', openVibeScreen);
+document.getElementById('backBtn').addEventListener('click', closeVibeScreen);
+document.getElementById('saveBtn').addEventListener('click', saveVibe);
+document.getElementById('resetBtn').addEventListener('click', resetFlowers);
+
+// ============ INIT ============
+loadState();
+resizeCanvas();
+updateScoreUI();
+updateAllFlowerUI();
+updateVibeBtn();
+document.getElementById('soundBtn').textContent = state.soundOn ? '🔊' : '🔇';
+requestAnimationFrame(gameLoop);
+
+// Предотвращение скролла
+document.addEventListener('touchmove', (e) => {
+  if (e.target.tagName !== 'BUTTON') e.preventDefault();
+}, { passive: false });
+</script>
+</body>
+</html>
